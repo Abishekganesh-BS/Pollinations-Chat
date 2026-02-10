@@ -133,6 +133,45 @@ export default function ChatPage({
     await persistSettings(updated);
   };
 
+  /* ── error handling ─────────────────────────────────── */
+  const handleError = useCallback((err: unknown) => {
+    if (err instanceof PollinationsError) {
+      switch (err.status) {
+        case 401:
+          notifyError('Your session has expired. Please sign in again.');
+          break;
+        case 402:
+          notifyError('Insufficient pollen balance. Please top up your account.');
+          break;
+        case 403:
+          notifyError('This model requires a higher tier. Try a different model.');
+          break;
+        case 429:
+          notifyError('Too many requests. Please wait a moment and try again.');
+          break;
+        case 0:
+          notifyError('Unable to connect. Please check your internet connection.');
+          break;
+        default:
+          notifyError('Something went wrong. Please try again.');
+      }
+    } else {
+      notifyError('An unexpected error occurred. Please try again.');
+    }
+  }, [notifyError]);
+
+  /* ── post-generation tasks ──────────────────────────── */
+  const postGenerationTasks = useCallback(async () => {
+    if (settings.autoReadBalance) refreshBalance();
+    if (settings.autoFetchUsage) {
+      try {
+        await getUsage(apiKey);
+      } catch {
+        /* silent */
+      }
+    }
+  }, [settings.autoReadBalance, settings.autoFetchUsage, refreshBalance, apiKey]);
+
   /* ── send / stream ──────────────────────────────────── */
   const handleSend = useCallback(async (text: string, mode: GenerationMode, attachments: MessageAttachment[]) => {
     if (!selectedModel || (!text.trim() && attachments.length === 0)) return;
@@ -372,33 +411,6 @@ export default function ChatPage({
     abortRef.current?.abort();
   };
 
-  /* ── error handling ─────────────────────────────────── */
-  const handleError = useCallback((err: unknown) => {
-    if (err instanceof PollinationsError) {
-      switch (err.status) {
-        case 401:
-          notifyError('Your session has expired. Please sign in again.');
-          break;
-        case 402:
-          notifyError('Insufficient pollen balance. Please top up your account.');
-          break;
-        case 403:
-          notifyError('This model requires a higher tier. Try a different model.');
-          break;
-        case 429:
-          notifyError('Too many requests. Please wait a moment and try again.');
-          break;
-        case 0:
-          notifyError('Unable to connect. Please check your internet connection.');
-          break;
-        default:
-          notifyError('Something went wrong. Please try again.');
-      }
-    } else {
-      notifyError('An unexpected error occurred. Please try again.');
-    }
-  }, [notifyError]);
-
   /* ── extract friendly error message ─────────────────── */
   const extractFriendlyError = (err: unknown, modelName: string, mode: string): string => {
     const modeLabel = mode.charAt(0).toUpperCase() + mode.slice(1);
@@ -436,18 +448,6 @@ export default function ChatPage({
     }
     return `**${modeLabel} generation failed**\n\nAn unexpected error occurred with **${modelName}**. Please try again or use a different model.`;
   };
-
-  /* ── post-generation tasks ──────────────────────────── */
-  const postGenerationTasks = useCallback(async () => {
-    if (settings.autoReadBalance) refreshBalance();
-    if (settings.autoFetchUsage) {
-      try {
-        await getUsage(apiKey);
-      } catch {
-        /* silent */
-      }
-    }
-  }, [settings.autoReadBalance, settings.autoFetchUsage, refreshBalance, apiKey]);
 
   /* ── message actions (hover toolbar) ────────────────── */
   const handleRegenerate = useCallback(async (assistantMessageId: string) => {

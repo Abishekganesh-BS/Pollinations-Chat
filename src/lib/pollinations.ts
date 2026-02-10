@@ -567,18 +567,27 @@ export async function generateAudio(
 // ─── Parse API errors (handles both {error:{message}} and {error:string, message:string}) ──
 
 function parseApiError(body: unknown, fallback: string): string {
-  if (!body) return fallback;
+  if (!body || typeof body !== 'object') return fallback;
+  
+  const bodyObj = body as Record<string, unknown>;
+  
   // Standard OpenAI-style: { error: { message: "..." } }
-  if (typeof body.error === 'object' && body.error?.message) {
-    return stripHtml(body.error.message);
+  if (typeof bodyObj.error === 'object' && bodyObj.error !== null) {
+    const errorObj = bodyObj.error as Record<string, unknown>;
+    if (typeof errorObj.message === 'string') {
+      return stripHtml(errorObj.message);
+    }
   }
+  
   // Pollinations-style: { error: "Internal Server Error", message: "..." }
-  if (body.message && typeof body.message === 'string') {
-    return stripHtml(body.message);
+  if (typeof bodyObj.message === 'string') {
+    return stripHtml(bodyObj.message);
   }
-  if (typeof body.error === 'string') {
-    return stripHtml(body.error);
+  
+  if (typeof bodyObj.error === 'string') {
+    return stripHtml(bodyObj.error);
   }
+  
   return fallback;
 }
 

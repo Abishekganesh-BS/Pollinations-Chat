@@ -376,7 +376,7 @@ function MessageBubble({
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    code: CodeBlock as unknown as typeof ReactMarkdown.defaultComponents.code,
+                    code: CodeBlock,
                   }}
                 >
                   {message.content}

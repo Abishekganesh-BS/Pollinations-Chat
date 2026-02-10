@@ -110,16 +110,37 @@ dist
 !.vscode/settings.json
 *.code-workspace
 
+# JetBrains IDEs (WebStorm, IntelliJ, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+
 # Mac
 .DS_Store
+.AppleDouble
+.LSOverride
 
 # Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
 
 # Vite & Vitest generated types
 vite.config.d.ts
 vite.config.d.ts.map
 vitest.config.d.ts
 vitest.config.d.ts.map
+*.d.ts.map
+
+# Build output
+dist-ssr
+*.local
+
+# Editor directories and files
+.fleet/
+.vercel
