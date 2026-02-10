@@ -164,7 +164,7 @@ export default function Composer({
   );
 
   return (
-    <div className="px-2 sm:px-6 pb-3 pt-1 sm:pb-4 sm:pt-2">
+    <div className="px-2 sm:px-6 pb-3 pt-1 sm:pb-4 sm:pt-2 bg-background pb-safe">
       {/* Attachments preview */}
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-2">
@@ -290,9 +290,9 @@ export default function Composer({
         )}
       </div>
 
-      {/* Token meter circle — right side */}
+      {/* Token meter circle — right side (desktop only, shown in header on mobile) */}
       {tokenInfo.usageRatio > 0 && (
-        <div className="group relative flex-shrink-0 self-center">
+        <div className="group relative flex-shrink-0 self-center hidden sm:block">
           <svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
             <circle
               cx="18" cy="18" r="15"

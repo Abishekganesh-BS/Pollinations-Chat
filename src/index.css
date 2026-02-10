@@ -54,7 +54,9 @@
   html,
   body,
   #root {
-    @apply h-full overflow-hidden;
+    @apply overflow-hidden;
+    height: 100vh;
+    height: 100dvh;
   }
 
   body {
@@ -197,11 +199,6 @@
 
 /* ── touch device support ─────────────────────────────── */
 @media (hover: none) and (pointer: coarse) {
-  /* Always show action toolbars on touch devices */
-  .touch-show {
-    opacity: 1 !important;
-  }
-
   /* Disable tap highlight for cleaner touch UX */
   button, a, [role="button"] {
     -webkit-tap-highlight-color: transparent;
@@ -211,6 +208,13 @@
 /* Touch action utility */
 .touch-action-manipulation {
   touch-action: manipulation;
+}
+
+/* Safe area padding for devices with notches/home bars */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* ── streaming text fade-in (Gemini-style) ────────────── */

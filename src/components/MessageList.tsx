@@ -47,7 +47,7 @@ export default function MessageList({ messages, isStreaming, onRegenerate, onEdi
     <div
       ref={scrollContainerRef}
       onScroll={handleScroll}
-      className="h-full overflow-y-auto px-4 py-6 space-y-4"
+      className="h-full overflow-y-auto px-3 sm:px-4 pt-6 pb-6 space-y-4"
     >
       {messages.map((msg) => {
         // Skip empty partial messages — the skeleton indicator handles that
@@ -162,6 +162,9 @@ function MessageBubble({
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(message.content);
   const editRef = useRef<HTMLTextAreaElement>(null);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchMoved = useRef(false);
 
   useEffect(() => {
     if (editing && editRef.current) {
@@ -170,6 +173,39 @@ function MessageBubble({
       editRef.current.style.height = editRef.current.scrollHeight + 'px';
     }
   }, [editing]);
+
+  // Cleanup long-press timer
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    };
+  }, []);
+
+  // Long-press handlers for mobile action overlay
+  const handleTouchStart = useCallback(() => {
+    touchMoved.current = false;
+    longPressTimer.current = setTimeout(() => {
+      if (!touchMoved.current) {
+        setMobileActionsOpen(true);
+        if (navigator.vibrate) navigator.vibrate(30);
+      }
+    }, 500);
+  }, []);
+
+  const handleTouchMove = useCallback(() => {
+    touchMoved.current = true;
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
 
   if (isSystem) {
     return (
@@ -199,10 +235,16 @@ function MessageBubble({
 
   return (
     <div className={`group flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className="relative max-w-[92%] sm:max-w-[80%] min-w-0">
-        {/* Hover action toolbar */}
+      <div
+        className="relative max-w-[92%] sm:max-w-[80%] min-w-0"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onContextMenu={(e) => { if ('ontouchstart' in window) e.preventDefault(); }}
+      >
+        {/* Hover action toolbar — desktop only */}
         {!message.isPartial && (
-          <div className={`absolute -top-8 ${isUser ? 'right-0' : 'left-0'} opacity-0 group-hover:opacity-100 touch-show transition-opacity duration-150 z-10`}>
+          <div className={`absolute -top-8 ${isUser ? 'right-0' : 'left-0'} hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10`}>
             <div className="flex items-center gap-0.5 bg-popover border border-border rounded-lg shadow-lg px-1 py-0.5">
               {/* Copy */}
               <button
@@ -359,6 +401,70 @@ function MessageBubble({
             )}
           </div>
         </div>
+
+        {/* Mobile long-press action overlay */}
+        {mobileActionsOpen && (
+          <div
+            className="fixed inset-0 z-50 sm:hidden animate-fade-in"
+            onClick={() => setMobileActionsOpen(false)}
+            style={{ touchAction: 'none' }}
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div
+              className="relative z-10 flex flex-col items-center justify-center h-full px-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Popped message preview */}
+              <div className={`w-full max-w-sm rounded-xl px-4 py-3 shadow-2xl ring-1 ring-white/10 ${
+                isUser ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-card-foreground'
+              }`}>
+                <p className="text-sm whitespace-pre-wrap line-clamp-8">{message.content}</p>
+                {message.attachments.length > 0 && (
+                  <p className="text-xs mt-1 opacity-60">{message.attachments.length} attachment(s)</p>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
+                <button
+                  onClick={() => { handleCopy(); setMobileActionsOpen(false); }}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-card border border-border rounded-full text-sm text-foreground active:bg-accent transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                  Copy
+                </button>
+                {isUser && onEditAndRegenerate && (
+                  <button
+                    onClick={() => { setEditText(message.content); setEditing(true); setMobileActionsOpen(false); }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-card border border-border rounded-full text-sm text-foreground active:bg-accent transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    Edit
+                  </button>
+                )}
+                {!isUser && onRegenerate && (
+                  <button
+                    onClick={() => { onRegenerate(message.id); setMobileActionsOpen(false); }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-card border border-border rounded-full text-sm text-foreground active:bg-accent transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    Retry
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => { onDelete(message.id); setMobileActionsOpen(false); }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-destructive/10 border border-destructive/30 rounded-full text-sm text-destructive active:bg-destructive/20 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Delete
+                  </button>
+                )}
+              </div>
+              <p className="text-center text-xs text-muted-foreground/60 mt-4">Tap anywhere to dismiss</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

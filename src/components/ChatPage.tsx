@@ -29,7 +29,7 @@ import {
   generateVideo,
   PollinationsError,
 } from '../lib/pollinations';
-import { estimateTokens } from '../lib/tokenizer';
+import { estimateTokens, getTokenMeterColor } from '../lib/tokenizer';
 import { computePollenCost, hasSufficientPollen, formatPollen } from '../lib/pollenMath';
 import { getSettings, saveSettings as persistSettings } from '../lib/storage';
 import { useLocalSession } from '../hooks/useLocalSession';
@@ -627,7 +627,7 @@ export default function ChatPage({
 
   /* ── render ─────────────────────────────────────────── */
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-dvh bg-background text-foreground overflow-hidden">
       {sidebar}
 
       {/* Overlay for mobile sidebar */}
@@ -639,11 +639,11 @@ export default function ChatPage({
       )}
 
       {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
+      <div className="flex-1 flex flex-col min-w-0 h-full">
         {/* Header — unified bar with model selection and capabilities */}
-        <header className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-3 bg-background">
+        <header className="sticky top-0 z-10 flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-3 bg-background/95 backdrop-blur-sm border-b border-border/40">
           <button
-            className="lg:hidden p-1.5 rounded-md hover:bg-accent transition-colors flex-shrink-0"
+            className="lg:hidden p-2 rounded-lg bg-secondary border border-border/50 hover:bg-accent transition-colors flex-shrink-0 text-foreground"
             onClick={() => setSidebarOpen(true)}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -675,6 +675,20 @@ export default function ChatPage({
               onRefresh={refreshBalance}
             />
           )}
+
+          {/* Token meter — mobile header only */}
+          {tokenMeter.usageRatio > 0 && (
+            <div className="relative flex-shrink-0 sm:hidden">
+              <svg className="w-7 h-7 -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15" fill="none" stroke="hsl(var(--secondary))" strokeWidth="3" />
+                <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" className={getTokenMeterColor(tokenMeter.totalInputTokens, tokenMeter.maxInputTokens)} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${Math.min(tokenMeter.usageRatio, 1) * 94.25} 94.25`} style={{ transition: 'stroke-dasharray 0.3s ease' }} />
+              </svg>
+              <span className={`absolute inset-0 flex items-center justify-center text-[7px] font-mono ${tokenMeter.isOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {Math.min(Math.round(tokenMeter.usageRatio * 100), 100)}%
+              </span>
+            </div>
+          )}
+
           <button
             onClick={() => setSettingsOpen(true)}
             className="p-1.5 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
@@ -729,8 +743,8 @@ export default function ChatPage({
               />
             </div>
 
-            {/* Composer */}
-            <div className="flex-shrink-0">
+            {/* Composer — fixed at bottom, unaffected by content above */}
+            <div className="flex-shrink-0 sticky bottom-0 z-10 bg-background">
               <Composer
                 model={selectedModel}
                 models={models}
