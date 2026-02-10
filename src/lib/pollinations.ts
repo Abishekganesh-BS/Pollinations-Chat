@@ -566,7 +566,7 @@ export async function generateAudio(
 
 // ─── Parse API errors (handles both {error:{message}} and {error:string, message:string}) ──
 
-function parseApiError(body: any, fallback: string): string {
+function parseApiError(body: unknown, fallback: string): string {
   if (!body) return fallback;
   // Standard OpenAI-style: { error: { message: "..." } }
   if (typeof body.error === 'object' && body.error?.message) {

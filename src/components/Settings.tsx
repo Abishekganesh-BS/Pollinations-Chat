@@ -68,7 +68,7 @@ export default function Settings({
 
       onImport(imported);
       notifySuccess(`Imported ${imported.length} chat session(s)`);
-    } catch (err) {
+    } catch {
       notifyError('Failed to import file. Please make sure it\'s a valid export file.');
     }
 

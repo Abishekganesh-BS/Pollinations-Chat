@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { PollinationsModel, AuthState } from './types';
 import { getAllModels } from './lib/pollinations';
-import { getApiKey, saveApiKey, clearApiKey } from './lib/storage';
+import { saveApiKey, clearApiKey } from './lib/storage';
 import { usePollinationsAuth } from './hooks/usePollinationsAuth';
 import { useNotifications } from './hooks/useNotifications';
 import AuthScreen from './components/AuthScreen';
@@ -62,7 +62,7 @@ export default function App() {
       // No auto-auth — show auth screen
       setLoading(false);
     }
-  }, [autoAuthLoading, autoAuthState]);
+  }, [autoAuthLoading, autoAuthState, notifySuccess]);
 
   /* ── restore persisted key on mount (fallback, runs if auto-auth didn't find anything) ── */
   // Note: usePollinationsAuth already handles stored key restoration,

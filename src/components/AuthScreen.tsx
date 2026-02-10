@@ -10,7 +10,7 @@
 
 import { useState } from 'react';
 import type { AuthState } from '../types';
-import { validateApiKey, getProfile, getBalance } from '../lib/pollinations';
+import { validateApiKey, getProfile } from '../lib/pollinations';
 import { saveApiKey } from '../lib/storage';
 
 const AUTHORIZE_URL = 'https://enter.pollinations.ai/authorize';

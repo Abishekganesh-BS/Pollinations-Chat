@@ -3,7 +3,7 @@
  * Renders as a fragment to be placed inside the unified header bar.
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
 import type { PollinationsModel } from '../types';
 import { computePollenCost, formatPollen } from '../lib/pollenMath';
 
@@ -39,7 +39,7 @@ function CapBadge({
 }: {
   label: string;
   active: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <span

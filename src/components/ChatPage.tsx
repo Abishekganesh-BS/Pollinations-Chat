@@ -68,7 +68,6 @@ export default function ChatPage({
     deleteSession,
     deleteMessage,
     deleteMessagesFrom,
-    replaceMessageContent,
     importSessions,
     clearAll,
   } = useLocalSession();
@@ -135,7 +134,7 @@ export default function ChatPage({
   };
 
   /* ── send / stream ──────────────────────────────────── */
-  const handleSend = async (text: string, mode: GenerationMode, attachments: MessageAttachment[]) => {
+  const handleSend = useCallback(async (text: string, mode: GenerationMode, attachments: MessageAttachment[]) => {
     if (!selectedModel || (!text.trim() && attachments.length === 0)) return;
 
     // Pollen gate
@@ -354,14 +353,27 @@ export default function ChatPage({
       abortRef.current = null;
       postGenerationTasks();
     }
-  };
+  }, [
+    selectedModel,
+    settings,
+    balance,
+    activeSessionId,
+    activeSession,
+    createSession,
+    addMessage,
+    updateMessage,
+    notifyError,
+    apiKey,
+    handleError,
+    postGenerationTasks,
+  ]);
 
   const handleCancel = () => {
     abortRef.current?.abort();
   };
 
   /* ── error handling ─────────────────────────────────── */
-  const handleError = (err: unknown) => {
+  const handleError = useCallback((err: unknown) => {
     if (err instanceof PollinationsError) {
       switch (err.status) {
         case 401:
@@ -385,7 +397,7 @@ export default function ChatPage({
     } else {
       notifyError('An unexpected error occurred. Please try again.');
     }
-  };
+  }, [notifyError]);
 
   /* ── extract friendly error message ─────────────────── */
   const extractFriendlyError = (err: unknown, modelName: string, mode: string): string => {
@@ -426,7 +438,7 @@ export default function ChatPage({
   };
 
   /* ── post-generation tasks ──────────────────────────── */
-  const postGenerationTasks = async () => {
+  const postGenerationTasks = useCallback(async () => {
     if (settings.autoReadBalance) refreshBalance();
     if (settings.autoFetchUsage) {
       try {
@@ -435,7 +447,7 @@ export default function ChatPage({
         /* silent */
       }
     }
-  };
+  }, [settings.autoReadBalance, settings.autoFetchUsage, refreshBalance, apiKey]);
 
   /* ── message actions (hover toolbar) ────────────────── */
   const handleRegenerate = useCallback(async (assistantMessageId: string) => {

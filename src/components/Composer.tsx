@@ -2,7 +2,7 @@
  * Composer — text input + mode dropdown + attachments + token meter + send.
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent, type KeyboardEvent } from 'react';
 import { v4 as uuid } from 'uuid';
 import type { GenerationMode, MessageAttachment, PollinationsModel } from '../types';
 import { getTokenMeterColor } from '../lib/tokenizer';
@@ -34,12 +34,6 @@ const MODE_OPTIONS: { value: GenerationMode; label: string }[] = [
   { value: 'image', label: 'Image' },
   { value: 'video', label: 'Video' },
 ];
-
-const PLACEHOLDERS: Partial<Record<GenerationMode, string>> = {
-  text: 'Type your message...',
-  image: 'Describe the image you want to generate...',
-  video: 'Describe the video you want to create...',
-};
 
 export default function Composer({
   onSend,
@@ -83,7 +77,7 @@ export default function Composer({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (!disabled && !isStreaming) handleSend();
@@ -148,7 +142,7 @@ export default function Composer({
       // For text models, reset to text
       setMode('text');
     }
-  }, [model?.id]);
+  }, [model]);
 
   // Accept types for file input
   const acceptTypes =

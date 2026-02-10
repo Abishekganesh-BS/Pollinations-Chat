@@ -12,7 +12,6 @@ import {
   clearAllSessions as clearAllSessionsFromDB,
   getLastActiveSession,
   setLastActiveSession,
-  getSession,
 } from '../lib/storage';
 
 export function useLocalSession() {

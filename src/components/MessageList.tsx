@@ -3,7 +3,7 @@
  * hover action toolbar, and full Markdown rendering with syntax highlighting.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type HTMLAttributes, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -33,11 +33,12 @@ export default function MessageList({ messages, isStreaming, onRegenerate, onEdi
   }, []);
 
   // Auto-scroll to bottom on new messages (unless user scrolled up)
+  const lastMessageContent = messages[messages.length - 1]?.content;
   useEffect(() => {
     if (!userScrolledUp.current) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, messages[messages.length - 1]?.content]);
+  }, [messages, lastMessageContent]);
 
   // Show typing indicator when streaming and last assistant message is empty
   const lastMsg = messages[messages.length - 1];
@@ -90,7 +91,7 @@ export default function MessageList({ messages, isStreaming, onRegenerate, onEdi
 }
 
 /* ── Code block component with syntax highlighting + copy ─────── */
-function CodeBlock({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { children?: React.ReactNode }) {
+function CodeBlock({ className, children, ...props }: HTMLAttributes<HTMLElement> & { children?: ReactNode }) {
   const [copied, setCopied] = useState(false);
   const match = /language-(\w+)/.exec(className || '');
   const code = String(children).replace(/\n$/, '');
@@ -375,7 +376,7 @@ function MessageBubble({
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    code: CodeBlock as any,
+                    code: CodeBlock as unknown as typeof ReactMarkdown.defaultComponents.code,
                   }}
                 >
                   {message.content}
