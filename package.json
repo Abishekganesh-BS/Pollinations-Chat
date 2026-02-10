@@ -2,7 +2,7 @@
   "name": "pollinations-chat",
   "version": "1.0.0",
   "description": "Open-source Chat with AI web app using Pollinations API",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
