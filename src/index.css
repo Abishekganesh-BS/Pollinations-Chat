@@ -195,6 +195,24 @@
   font-weight: bold;
 }
 
+/* ── touch device support ─────────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* Always show action toolbars on touch devices */
+  .touch-show {
+    opacity: 1 !important;
+  }
+
+  /* Disable tap highlight for cleaner touch UX */
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Touch action utility */
+.touch-action-manipulation {
+  touch-action: manipulation;
+}
+
 /* ── streaming text fade-in (Gemini-style) ────────────── */
 @keyframes stream-fade-in {
   from {

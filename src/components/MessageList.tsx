@@ -67,7 +67,7 @@ export default function MessageList({ messages, isStreaming, onRegenerate, onEdi
       {/* Typing / loading indicator */}
       {showTypingIndicator && (
         <div className="flex justify-start animate-fade-in">
-          <div className="bg-card border border-border rounded-lg px-4 py-3 shadow-sm max-w-[80%]">
+            <div className="bg-card border border-border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm max-w-[92%] sm:max-w-[80%]">
             {/* Skeleton lines */}
             <div className="space-y-2.5 mb-2">
               <div className="h-3 bg-muted rounded-full w-48 animate-pulse" />
@@ -103,8 +103,8 @@ function CodeBlock({ className, children, ...props }: React.HTMLAttributes<HTMLE
 
   if (match) {
     return (
-      <div className="relative group/code my-3">
-        <div className="flex items-center justify-between bg-[#282c34] rounded-t-lg px-4 py-1.5 text-xs text-muted-foreground border-b border-white/10">
+      <div className="relative group/code my-3 max-w-full overflow-hidden">
+        <div className="flex items-center justify-between bg-[#282c34] rounded-t-lg px-3 sm:px-4 py-1.5 text-xs text-muted-foreground border-b border-white/10">
           <span>{match[1]}</span>
           <button
             onClick={handleCopy}
@@ -199,10 +199,10 @@ function MessageBubble({
 
   return (
     <div className={`group flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className="relative max-w-[80%]">
+      <div className="relative max-w-[92%] sm:max-w-[80%] min-w-0">
         {/* Hover action toolbar */}
         {!message.isPartial && (
-          <div className={`absolute -top-8 ${isUser ? 'right-0' : 'left-0'} opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10`}>
+          <div className={`absolute -top-8 ${isUser ? 'right-0' : 'left-0'} opacity-0 group-hover:opacity-100 touch-show transition-opacity duration-150 z-10`}>
             <div className="flex items-center gap-0.5 bg-popover border border-border rounded-lg shadow-lg px-1 py-0.5">
               {/* Copy */}
               <button
@@ -259,7 +259,7 @@ function MessageBubble({
 
         {/* Message bubble */}
         <div
-          className={`rounded-lg px-4 py-3 shadow-sm ${
+          className={`rounded-lg px-3 py-2.5 sm:px-4 sm:py-3 shadow-sm overflow-hidden ${
             isUser
               ? 'bg-primary text-primary-foreground'
               : 'bg-card border border-border text-card-foreground'
@@ -275,14 +275,14 @@ function MessageBubble({
                       src={att.dataUrl}
                       alt={att.name}
                       className={`rounded-md object-contain ${
-                        isUser ? 'max-w-[200px] max-h-[150px]' : 'max-w-full max-h-[500px] w-auto'
+                        isUser ? 'max-w-[160px] max-h-[120px] sm:max-w-[200px] sm:max-h-[150px]' : 'max-w-full max-h-[400px] sm:max-h-[500px] w-auto'
                       }`}
                     />
                   ) : att.type === 'audio' ? (
-                    <audio controls src={att.dataUrl} className="max-w-full min-w-[280px]" />
+                    <audio controls src={att.dataUrl} className="max-w-full w-full sm:min-w-[280px]" />
                   ) : att.type === 'video' ? (
                     <video controls src={att.dataUrl} className={`rounded-md ${
-                      isUser ? 'max-w-[250px]' : 'max-w-full max-h-[500px] w-auto'
+                      isUser ? 'max-w-[200px] sm:max-w-[250px]' : 'max-w-full max-h-[400px] sm:max-h-[500px] w-auto'
                     }`} />
                   ) : (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
@@ -348,7 +348,7 @@ function MessageBubble({
           )}
 
           {/* Metadata */}
-          <div className={`flex items-center gap-3 mt-2 text-xs ${isUser ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
+          <div className={`flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-0.5 mt-1.5 sm:mt-2 text-[11px] sm:text-xs ${isUser ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
             <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
             {message.model && <span>· {message.model}</span>}
             {message.tokensUsed !== undefined && (

@@ -38,14 +38,14 @@ export default function UsageIcon({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
         {balance && (
-          <span className="text-xs text-foreground font-mono">
+          <span className="text-xs text-foreground font-mono hidden sm:inline">
             {formatPollen(balance.balance)}
           </span>
         )}
       </button>
 
       {showPopover && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-popover border border-border rounded-lg shadow-xl p-4 z-50">
+        <div className="absolute top-full right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-popover border border-border rounded-lg shadow-xl p-4 z-50">
           <h3 className="text-sm font-semibold text-popover-foreground mb-3">Usage & Balance</h3>
 
           {balance && (

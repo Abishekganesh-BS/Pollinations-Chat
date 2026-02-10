@@ -164,7 +164,7 @@ export default function Composer({
   );
 
   return (
-    <div className="px-4 sm:px-6 pb-4 pt-2">
+    <div className="px-2 sm:px-6 pb-3 pt-1 sm:pb-4 sm:pt-2">
       {/* Attachments preview */}
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-2">
@@ -196,15 +196,15 @@ export default function Composer({
       )}
 
       {/* Floating input pill */}
-      <div className="flex items-end gap-2 ">
-        <div className="flex-1 flex items-end gap-0 bg-secondary border border-border rounded-full px-1.5 py-1">
+      <div className="flex items-end gap-1.5 sm:gap-2 ">
+        <div className="flex-1 min-w-0 flex items-end gap-0 bg-secondary border border-border rounded-full px-1 sm:px-1.5 py-1">
         {/* Attachment (+) button — inside left */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+          className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
           title="Attach file"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         </button>
@@ -226,7 +226,7 @@ export default function Composer({
           placeholder="Ask anything"
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none bg-transparent px-2 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none max-h-[120px]"
+          className="flex-1 min-w-0 resize-none bg-transparent px-1.5 sm:px-2 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none max-h-[120px]"
         />
 
         {/* Inline model picker — floating right */}
@@ -240,7 +240,7 @@ export default function Composer({
         <div className="relative flex-shrink-0">
           <button
             onClick={() => setShowModeMenu(!showModeMenu)}
-            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+            className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
             title={`Mode: ${effectiveMode}`}
           >
             <ModeIcon mode={effectiveMode} />
@@ -269,7 +269,7 @@ export default function Composer({
         {isStreaming ? (
           <button
             onClick={onCancel}
-            className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
+            className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
             title="Stop generation"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -280,7 +280,7 @@ export default function Composer({
           <button
             onClick={handleSend}
             disabled={disabled || (!text.trim() && attachments.length === 0)}
-            className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="Send message"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
@@ -388,7 +388,7 @@ function InlineModelPicker({
     <div className="relative flex-shrink-0" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 px-2.5 h-9 rounded-full hover:bg-accent transition-colors text-xs text-muted-foreground hover:text-foreground whitespace-nowrap max-w-[140px]"
+        className="flex items-center gap-1 px-2 sm:px-2.5 h-8 sm:h-9 rounded-full hover:bg-accent transition-colors text-xs text-muted-foreground hover:text-foreground whitespace-nowrap max-w-[100px] sm:max-w-[140px]"
         title={selected.name}
       >
         <ModelTypeIcon type={selected.type} />
@@ -399,7 +399,7 @@ function InlineModelPicker({
       </button>
 
       {open && (
-        <div className="absolute bottom-full mb-2 left-0 bg-popover border border-border rounded-lg shadow-xl z-50 w-72 animate-fade-in overflow-hidden">
+        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 bg-popover border border-border rounded-lg shadow-xl z-50 w-[calc(100vw-2rem)] sm:w-72 max-w-72 animate-fade-in overflow-hidden">
           {/* Search */}
           <div className="p-2 border-b border-border">
             <div className="flex items-center gap-2 bg-secondary rounded-md px-2.5 py-1.5">

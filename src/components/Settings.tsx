@@ -76,8 +76,8 @@ export default function Settings({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-40 p-4">
-      <div className="bg-card border border-border rounded-lg w-full max-w-lg max-h-[80vh] overflow-y-auto p-6 shadow-xl">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-40 p-2 sm:p-4">
+      <div className="bg-card border border-border rounded-lg w-full max-w-lg max-h-[92vh] sm:max-h-[80vh] overflow-y-auto p-4 sm:p-6 shadow-xl">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-foreground">Settings</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">

@@ -591,7 +591,7 @@ export default function ChatPage({
                     setRenamingId(s.id);
                     setRenameText(s.title);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-foreground transition-all"
+                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 active:opacity-100 p-1 hover:text-foreground transition-all touch-action-manipulation"
                   title="Rename chat"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -603,7 +603,7 @@ export default function ChatPage({
                     e.stopPropagation();
                     deleteSession(s.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-destructive transition-all"
+                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 active:opacity-100 p-1 hover:text-destructive transition-all touch-action-manipulation"
                   title="Delete chat"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -641,9 +641,9 @@ export default function ChatPage({
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen">
         {/* Header — unified bar with model selection and capabilities */}
-        <header className="flex-shrink-0 flex items-center gap-2 px-3 py-3 bg-background">
+        <header className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-3 bg-background">
           <button
-            className="lg:hidden p-1.5 rounded-md hover:bg-accent transition-colors"
+            className="lg:hidden p-1.5 rounded-md hover:bg-accent transition-colors flex-shrink-0"
             onClick={() => setSidebarOpen(true)}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -651,7 +651,10 @@ export default function ChatPage({
             </svg>
           </button>
 
-          <span className="text-xl font-bold text-foreground whitespace-nowrap">Pollinations.AI</span>
+          <span className="text-lg sm:text-xl font-bold text-foreground whitespace-nowrap">
+            <span className="sm:hidden">P.AI</span>
+            <span className="hidden sm:inline">Pollinations.AI</span>
+          </span>
 
           {selectedModel && (
             <>
@@ -688,11 +691,11 @@ export default function ChatPage({
         {messages.length === 0 ? (
           /* ── Empty state: composer centered ── */
           <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-4">
-            <div className="text-center text-muted-foreground mb-8">
-              <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center text-muted-foreground mb-4 sm:mb-8">
+              <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <p className="text-lg font-medium">What can I help with?</p>
+              <p className="text-base sm:text-lg font-medium">What can I help with?</p>
             </div>
             <div className="w-full max-w-2xl">
               <Composer

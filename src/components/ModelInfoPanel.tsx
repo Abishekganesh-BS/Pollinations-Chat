@@ -90,7 +90,7 @@ function ModelDetailPopup({
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 mt-2 bg-popover border border-border rounded-lg shadow-xl p-3.5 z-50 min-w-[230px] animate-fade-in">
+        <div className="absolute top-full right-0 mt-2 bg-popover border border-border rounded-lg shadow-xl p-3.5 z-50 min-w-[230px] max-w-[calc(100vw-2rem)] animate-fade-in">
           <p className="text-xs font-semibold text-popover-foreground mb-1 truncate">{model.name}</p>
           {model.description && (
             <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed line-clamp-2">{model.description}</p>
