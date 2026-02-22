@@ -120,34 +120,61 @@ export async function saveSettings(settings: Partial<AppSettings>): Promise<void
   }
 }
 
-// ─── API Key (stored separately) ─────────────────────────────────
+// ─── API Key (stored in cookies) ─────────────────────────────────
+
+const API_KEY_COOKIE = 'pollinations_api_key';
 
 export async function saveApiKey(apiKey: string): Promise<void> {
   try {
-    const db = await getDB();
-    await db.put(SETTINGS_STORE, { key: 'api-key', value: apiKey });
+    const maxAge = 365 * 24 * 60 * 60; // 1 year
+    const secure = window.location.protocol === 'https:' ? ';Secure' : '';
+    document.cookie = `${API_KEY_COOKIE}=${encodeURIComponent(apiKey)};path=/;max-age=${maxAge};SameSite=Strict${secure}`;
   } catch {
-    console.warn('[storage] Failed to save API key');
+    console.warn('[storage] Failed to save API key to cookie');
   }
 }
 
 export async function getApiKey(): Promise<string | null> {
   try {
-    const db = await getDB();
-    const row = await db.get(SETTINGS_STORE, 'api-key');
-    return row?.value ?? null;
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, ...valueParts] = cookie.trim().split('=');
+      if (name === API_KEY_COOKIE) {
+        const value = decodeURIComponent(valueParts.join('='));
+        return value || null;
+      }
+    }
+    // Migration: check IndexedDB for existing key and migrate to cookie
+    try {
+      const db = await getDB();
+      const row = await db.get(SETTINGS_STORE, 'api-key');
+      if (row?.value) {
+        await saveApiKey(row.value); // Migrate to cookie
+        await db.delete(SETTINGS_STORE, 'api-key'); // Remove from IDB
+        return row.value;
+      }
+    } catch {
+      // IDB migration failed, not critical
+    }
+    return null;
   } catch {
-    console.warn('[storage] Failed to get API key');
+    console.warn('[storage] Failed to get API key from cookie');
     return null;
   }
 }
 
 export async function clearApiKey(): Promise<void> {
   try {
-    const db = await getDB();
-    await db.delete(SETTINGS_STORE, 'api-key');
+    document.cookie = `${API_KEY_COOKIE}=;path=/;max-age=0;SameSite=Strict`;
+    // Also clean up any old IDB entry
+    try {
+      const db = await getDB();
+      await db.delete(SETTINGS_STORE, 'api-key');
+    } catch {
+      // Not critical
+    }
   } catch {
-    console.warn('[storage] Failed to clear API key');
+    console.warn('[storage] Failed to clear API key cookie');
   }
 }
 

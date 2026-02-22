@@ -43,11 +43,10 @@ function CapBadge({
 }) {
   return (
     <span
-      className={`inline-flex items-center justify-center w-6 h-6 rounded-md transition-colors ${
-        active
-          ? 'bg-accent text-accent-foreground'
-          : 'bg-transparent text-muted-foreground/40'
-      }`}
+      className={`inline-flex items-center justify-center w-6 h-6 rounded-md transition-colors ${active
+        ? 'bg-accent text-accent-foreground'
+        : 'bg-transparent text-muted-foreground/40'
+        }`}
       title={label}
     >
       {children}
@@ -70,11 +69,15 @@ function ModelDetailPopup({
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (e: MouseEvent | TouchEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
   }, [open]);
 
   return (
@@ -90,7 +93,7 @@ function ModelDetailPopup({
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 mt-2 bg-popover border border-border rounded-lg shadow-xl p-3.5 z-50 min-w-[230px] max-w-[calc(100vw-2rem)] animate-fade-in">
+        <div className="absolute top-full mt-2 left-0 bg-popover border border-border rounded-lg shadow-xl p-3.5 z-50 min-w-[230px] max-w-[calc(100vw-2rem)] animate-fade-in">
           <p className="text-xs font-semibold text-popover-foreground mb-1 truncate">{model.name}</p>
           {model.description && (
             <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed line-clamp-2">{model.description}</p>

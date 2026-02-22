@@ -319,13 +319,14 @@ export async function getAudioModels(apiKey?: string): Promise<PollinationsModel
  * Fetch all models (text + image/video + audio) and return combined list.
  */
 export async function getAllModels(apiKey?: string): Promise<PollinationsModel[]> {
-  const [text, image] = await Promise.all([
+  const [text, image, audio] = await Promise.all([
     getTextModels(apiKey),
     getImageModels(apiKey),
+    getAudioModels(apiKey).catch(() => [] as PollinationsModel[]),
   ]);
-  // Filter out audio-type models
+  // Filter out audio-type models from text list (they'll come from audio endpoint)
   const filtered = text.filter((m) => m.type !== 'audio');
-  return [...filtered, ...image];
+  return [...filtered, ...image, ...audio];
 }
 
 // ─── Streaming Generation ────────────────────────────────────────
@@ -558,6 +559,36 @@ export async function generateAudio(
       const errBody = await res.json().catch(() => null);
       const msg = errBody?.error?.message ?? errBody?.message ?? `Audio generation failed: ${res.status}`;
       throw new PollinationsError(msg, res.status, errBody?.error?.code ?? '');
+    }
+    throw new PollinationsError(`Audio generation failed: ${res.status}`, res.status, '');
+  }
+  return res.blob();
+}
+
+/**
+ * Generate audio via GET /audio/{text} — used for dedicated audio models
+ * (TTS voices and music generation via elevenmusic).
+ */
+export async function generateAudioDirect(
+  apiKey: string,
+  text: string,
+  model: string,
+  options: { voice?: string; duration?: number; instrumental?: boolean } = {},
+): Promise<Blob> {
+  const params = new URLSearchParams({ model });
+  if (options.voice) params.set('voice', options.voice);
+  if (options.duration) params.set('duration', String(options.duration));
+  if (options.instrumental !== undefined) params.set('instrumental', String(options.instrumental));
+  params.set('key', apiKey);
+
+  const url = `${BASE}/audio/${encodeURIComponent(text)}?${params}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const ct = res.headers.get('content-type') ?? '';
+    if (ct.includes('application/json')) {
+      const errBody = await res.json().catch(() => null);
+      const msg = parseApiError(errBody, `Audio generation failed: ${res.status}`);
+      throw new PollinationsError(msg, res.status, typeof errBody?.error === 'object' ? errBody?.error?.code ?? '' : '');
     }
     throw new PollinationsError(`Audio generation failed: ${res.status}`, res.status, '');
   }

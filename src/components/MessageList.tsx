@@ -68,7 +68,7 @@ export default function MessageList({ messages, isStreaming, onRegenerate, onEdi
       {/* Typing / loading indicator */}
       {showTypingIndicator && (
         <div className="flex justify-start animate-fade-in">
-            <div className="bg-card border border-border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm max-w-[92%] sm:max-w-[80%]">
+          <div className="bg-card border border-border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm max-w-[92%] sm:max-w-[80%]">
             {/* Skeleton lines */}
             <div className="space-y-2.5 mb-2">
               <div className="h-3 bg-muted rounded-full w-48 animate-pulse" />
@@ -302,11 +302,10 @@ function MessageBubble({
 
         {/* Message bubble */}
         <div
-          className={`rounded-lg px-3 py-2.5 sm:px-4 sm:py-3 shadow-sm overflow-hidden ${
-            isUser
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-card border border-border text-card-foreground'
-          } ${message.isError ? 'border-destructive bg-destructive/10' : ''}`}
+          className={`rounded-lg px-3 py-2.5 sm:px-4 sm:py-3 shadow-sm overflow-hidden ${isUser
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-card border border-border text-card-foreground'
+            } ${message.isError ? 'border-destructive bg-destructive/10' : ''}`}
         >
           {/* Attachments */}
           {message.attachments.length > 0 && (
@@ -314,19 +313,67 @@ function MessageBubble({
               {message.attachments.map((att) => (
                 <div key={att.id} className="inline-block">
                   {att.type === 'image' ? (
-                    <img
-                      src={att.dataUrl}
-                      alt={att.name}
-                      className={`rounded-md object-contain ${
-                        isUser ? 'max-w-[160px] max-h-[120px] sm:max-w-[200px] sm:max-h-[150px]' : 'max-w-full max-h-[400px] sm:max-h-[500px] w-auto'
-                      }`}
-                    />
+                    <div className={`relative group/img inline-block ${isUser ? '' : ''}`}>
+                      <img
+                        src={att.dataUrl}
+                        alt={att.name}
+                        className={`rounded-md object-contain ${isUser ? 'max-w-[75vw] max-h-[300px] sm:max-w-[400px] sm:max-h-[350px]' : 'max-w-full max-h-[400px] sm:max-h-[500px] w-auto'
+                          }`}
+                      />
+                      {/* Image action toolbar — hover on desktop, tap on mobile */}
+                      {!isUser && (
+                        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity duration-150 z-10">
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const response = await fetch(att.dataUrl);
+                                const blob = await response.blob();
+                                // Convert to PNG for clipboard compatibility
+                                const pngBlob = await createImageBitmap(blob).then((bmp) => {
+                                  const canvas = document.createElement('canvas');
+                                  canvas.width = bmp.width;
+                                  canvas.height = bmp.height;
+                                  const ctx = canvas.getContext('2d')!;
+                                  ctx.drawImage(bmp, 0, 0);
+                                  return new Promise<Blob>((resolve) =>
+                                    canvas.toBlob((b) => resolve(b!), 'image/png')
+                                  );
+                                });
+                                await navigator.clipboard.write([
+                                  new ClipboardItem({ 'image/png': pngBlob }),
+                                ]);
+                              } catch {
+                                // Fallback: copy URL
+                                await navigator.clipboard.writeText(att.dataUrl);
+                              }
+                            }}
+                            className="p-1.5 bg-black/60 hover:bg-black/80 rounded-md text-white/90 hover:text-white transition-colors backdrop-blur-sm"
+                            title="Copy image"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                          <a
+                            href={att.dataUrl}
+                            download={att.name || 'image.png'}
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1.5 bg-black/60 hover:bg-black/80 rounded-md text-white/90 hover:text-white transition-colors backdrop-blur-sm"
+                            title="Download image"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   ) : att.type === 'audio' ? (
                     <audio controls src={att.dataUrl} className="max-w-full w-full sm:min-w-[280px]" />
                   ) : att.type === 'video' ? (
-                    <video controls src={att.dataUrl} className={`rounded-md ${
-                      isUser ? 'max-w-[200px] sm:max-w-[250px]' : 'max-w-full max-h-[400px] sm:max-h-[500px] w-auto'
-                    }`} />
+                    <video controls src={att.dataUrl} className={`rounded-md ${isUser ? 'max-w-[200px] sm:max-w-[250px]' : 'max-w-full max-h-[400px] sm:max-h-[500px] w-auto'
+                      }`} />
                   ) : (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -416,9 +463,8 @@ function MessageBubble({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Popped message preview */}
-              <div className={`w-full max-w-sm rounded-xl px-4 py-3 shadow-2xl ring-1 ring-white/10 ${
-                isUser ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-card-foreground'
-              }`}>
+              <div className={`w-full max-w-sm rounded-xl px-4 py-3 shadow-2xl ring-1 ring-white/10 ${isUser ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-card-foreground'
+                }`}>
                 <p className="text-sm whitespace-pre-wrap line-clamp-8">{message.content}</p>
                 {message.attachments.length > 0 && (
                   <p className="text-xs mt-1 opacity-60">{message.attachments.length} attachment(s)</p>

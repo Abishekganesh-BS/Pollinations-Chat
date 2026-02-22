@@ -33,6 +33,7 @@ const MODE_OPTIONS: { value: GenerationMode; label: string }[] = [
   { value: 'text', label: 'Text' },
   { value: 'image', label: 'Image' },
   { value: 'video', label: 'Video' },
+  { value: 'audio', label: 'Audio' },
 ];
 
 export default function Composer({
@@ -50,6 +51,7 @@ export default function Composer({
   const [mode, setMode] = useState<GenerationMode>('text');
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
   const [showModeMenu, setShowModeMenu] = useState(false);
+  const modeMenuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -132,11 +134,27 @@ export default function Composer({
   // Filter mode if current mode not supported
   const effectiveMode = supportedModes.includes(mode) ? mode : supportedModes[0] ?? 'text';
 
+  // Close mode menu on outside click
+  useEffect(() => {
+    if (!showModeMenu) return;
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (modeMenuRef.current && !modeMenuRef.current.contains(e.target as Node)) {
+        setShowModeMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [showModeMenu]);
+
   // Reset mode when model changes to the model's primary type
   useEffect(() => {
     if (!model) return;
-    // For image/video models, force the mode to the model's native type
-    if (model.type === 'image' || model.type === 'video') {
+    // For image/video/audio models, force the mode to the model's native type
+    if (model.type === 'image' || model.type === 'video' || model.type === 'audio') {
       setMode(model.type as GenerationMode);
     } else {
       // For text models, reset to text
@@ -144,13 +162,22 @@ export default function Composer({
     }
   }, [model]);
 
-  // Accept types for file input
   const acceptTypes =
     effectiveMode === 'image'
       ? 'image/*'
       : effectiveMode === 'video'
         ? 'video/*'
-        : 'image/*,video/*,*/*';
+        : effectiveMode === 'audio'
+          ? 'audio/*'
+          : 'image/*,video/*,*/*';
+
+  // Determine if attachment button should be enabled
+  // Only enable for models that support vision (image input)
+  const attachmentEnabled = model ? (
+    model.capabilities.vision ||
+    model.inputModalities.includes('image') ||
+    model.type === 'image'
+  ) : false;
 
   const meterColor = getTokenMeterColor(
     tokenInfo.totalInputTokens,
@@ -192,129 +219,132 @@ export default function Composer({
       {/* Floating input pill */}
       <div className="flex items-end gap-1.5 sm:gap-2 ">
         <div className="flex-1 min-w-0 flex items-end gap-0 bg-secondary border border-border rounded-full px-1 sm:px-1.5 py-1">
-        {/* Attachment (+) button — inside left */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-          title="Attach file"
-        >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={acceptTypes}
-          multiple
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-
-        {/* Text input */}
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={handleTextChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask anything"
-          disabled={disabled}
-          rows={1}
-          className="flex-1 min-w-0 resize-none bg-transparent px-1.5 sm:px-2 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none max-h-[120px]"
-        />
-
-        {/* Inline model picker — floating right */}
-        <InlineModelPicker
-          models={models}
-          selected={model}
-          onSelect={onSelectModel}
-        />
-
-        {/* Mode selector — microphone-style icon for non-text modes */}
-        <div className="relative flex-shrink-0">
+          {/* Attachment (+) button — inside left, disabled for non-vision models */}
           <button
-            onClick={() => setShowModeMenu(!showModeMenu)}
-            className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-            title={`Mode: ${effectiveMode}`}
+            onClick={() => attachmentEnabled && fileInputRef.current?.click()}
+            disabled={!attachmentEnabled}
+            className={`flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full transition-colors ${attachmentEnabled
+                ? 'hover:bg-accent text-muted-foreground hover:text-foreground'
+                : 'text-muted-foreground/30 cursor-not-allowed'
+              }`}
+            title={attachmentEnabled ? 'Attach file' : 'This model does not support file input'}
           >
-            <ModeIcon mode={effectiveMode} />
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
           </button>
-          {showModeMenu && (
-            <div className="absolute bottom-full mb-2 right-0 bg-popover border border-border rounded-lg shadow-lg py-1 z-10 min-w-[130px]">
-              {MODE_OPTIONS.filter((m) => supportedModes.includes(m.value)).map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => {
-                    setMode(m.value);
-                    setShowModeMenu(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 ${
-                    effectiveMode === m.value ? 'text-foreground' : 'text-muted-foreground'
-                  }`}
-                >
-                  <ModeIcon mode={m.value} /> {m.label}
-                </button>
-              ))}
-            </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={acceptTypes}
+            multiple
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+
+          {/* Text input */}
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={handleTextChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask anything"
+            disabled={disabled}
+            rows={1}
+            className="flex-1 min-w-0 resize-none bg-transparent px-1.5 sm:px-2 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none max-h-[120px]"
+          />
+
+          {/* Inline model picker — floating right */}
+          <InlineModelPicker
+            models={models}
+            selected={model}
+            onSelect={onSelectModel}
+          />
+
+          {/* Mode selector */}
+          <div className="relative flex-shrink-0" ref={modeMenuRef}>
+            <button
+              onClick={() => setShowModeMenu(!showModeMenu)}
+              className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+              title={`Mode: ${effectiveMode}`}
+            >
+              <ModeIcon mode={effectiveMode} />
+            </button>
+            {showModeMenu && (
+              <div className="absolute bottom-full mb-2 right-0 bg-popover border border-border rounded-lg shadow-lg py-1 z-10 min-w-[130px]">
+                {MODE_OPTIONS.filter((m) => supportedModes.includes(m.value)).map((m) => (
+                  <button
+                    key={m.value}
+                    onClick={() => {
+                      setMode(m.value);
+                      setShowModeMenu(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 ${effectiveMode === m.value ? 'text-foreground' : 'text-muted-foreground'
+                      }`}
+                  >
+                    <ModeIcon mode={m.value} /> {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Send / Cancel button — inside right */}
+          {isStreaming ? (
+            <button
+              onClick={onCancel}
+              className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
+              title="Stop generation"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={disabled || (!text.trim() && attachments.length === 0)}
+              className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title="Send message"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                <path d="M7 11L12 6L17 11M12 6V18" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           )}
         </div>
 
-        {/* Send / Cancel button — inside right */}
-        {isStreaming ? (
-          <button
-            onClick={onCancel}
-            className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
-            title="Stop generation"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
+        {/* Token meter circle — right side (desktop only, shown in header on mobile) */}
+        {tokenInfo.usageRatio > 0 && (
+          <div className="group relative flex-shrink-0 self-center hidden sm:block">
+            <svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
+              <circle
+                cx="18" cy="18" r="15"
+                fill="none"
+                stroke="hsl(var(--secondary))"
+                strokeWidth="3"
+              />
+              <circle
+                cx="18" cy="18" r="15"
+                fill="none"
+                stroke="currentColor"
+                className={meterColor}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={`${Math.min(tokenInfo.usageRatio, 1) * 94.25} 94.25`}
+                style={{ transition: 'stroke-dasharray 0.3s ease' }}
+              />
             </svg>
-          </button>
-        ) : (
-          <button
-            onClick={handleSend}
-            disabled={disabled || (!text.trim() && attachments.length === 0)}
-            className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            title="Send message"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
-              <path d="M7 11L12 6L17 11M12 6V18" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        )}
-      </div>
-
-      {/* Token meter circle — right side (desktop only, shown in header on mobile) */}
-      {tokenInfo.usageRatio > 0 && (
-        <div className="group relative flex-shrink-0 self-center hidden sm:block">
-          <svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
-            <circle
-              cx="18" cy="18" r="15"
-              fill="none"
-              stroke="hsl(var(--secondary))"
-              strokeWidth="3"
-            />
-            <circle
-              cx="18" cy="18" r="15"
-              fill="none"
-              stroke="currentColor"
-              className={meterColor}
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray={`${Math.min(tokenInfo.usageRatio, 1) * 94.25} 94.25`}
-              style={{ transition: 'stroke-dasharray 0.3s ease' }}
-            />
-          </svg>
-          <span className={`absolute inset-0 flex items-center justify-center text-[8px] font-mono ${tokenInfo.isOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
-            {Math.min(Math.round(tokenInfo.usageRatio * 100), 100)}%
-          </span>
-          <div className="absolute bottom-full mb-2 right-0 hidden group-hover:block bg-popover border border-border rounded-lg shadow-lg px-3 py-2 z-20 whitespace-nowrap">
-            <p className={`text-xs font-mono ${tokenInfo.isOverLimit ? 'text-destructive' : 'text-foreground'}`}>
-              {tokenInfo.totalInputTokens.toLocaleString()} / {tokenInfo.maxInputTokens.toLocaleString()} tokens
-            </p>
+            <span className={`absolute inset-0 flex items-center justify-center text-[8px] font-mono ${tokenInfo.isOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {Math.min(Math.round(tokenInfo.usageRatio * 100), 100)}%
+            </span>
+            <div className="absolute bottom-full mb-2 right-0 hidden group-hover:block bg-popover border border-border rounded-lg shadow-lg px-3 py-2 z-20 whitespace-nowrap">
+              <p className={`text-xs font-mono ${tokenInfo.isOverLimit ? 'text-destructive' : 'text-foreground'}`}>
+                {tokenInfo.totalInputTokens.toLocaleString()} / {tokenInfo.maxInputTokens.toLocaleString()} tokens
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );
@@ -322,8 +352,8 @@ export default function Composer({
 
 /* ── Inline model picker (inside pill) ────────────────── */
 
-const TYPE_ORDER: string[] = ['text', 'image', 'video'];
-const TYPE_LABELS: Record<string, string> = { text: 'Text', image: 'Image', video: 'Video' };
+const TYPE_ORDER: string[] = ['text', 'image', 'video', 'audio'];
+const TYPE_LABELS: Record<string, string> = { text: 'Text', image: 'Image', video: 'Video', audio: 'Audio' };
 
 function InlineModelPicker({
   models,
@@ -341,14 +371,18 @@ function InlineModelPicker({
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (e: MouseEvent | TouchEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
         setSearch('');
       }
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -393,7 +427,7 @@ function InlineModelPicker({
       </button>
 
       {open && (
-        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 bg-popover border border-border rounded-lg shadow-xl z-50 w-[calc(100vw-2rem)] sm:w-72 max-w-72 animate-fade-in overflow-hidden">
+        <div className="absolute bottom-full mb-2 right-0 bg-popover border border-border rounded-lg shadow-xl z-50 w-72 max-w-[calc(100vw-2rem)] animate-fade-in overflow-hidden">
           {/* Search */}
           <div className="p-2 border-b border-border">
             <div className="flex items-center gap-2 bg-secondary rounded-md px-2.5 py-1.5">
@@ -436,9 +470,8 @@ function InlineModelPicker({
                       setOpen(false);
                       setSearch('');
                     }}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent transition-colors ${
-                      selected && m.id === selected.id ? 'bg-accent/60 text-accent-foreground' : 'text-popover-foreground'
-                    }`}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent transition-colors ${selected && m.id === selected.id ? 'bg-accent/60 text-accent-foreground' : 'text-popover-foreground'
+                      }`}
                   >
                     <ModelTypeIcon type={m.type} />
                     <span className="flex-1 truncate">{m.name}</span>
@@ -470,6 +503,8 @@ function ModelTypeIcon({ type }: { type: string }) {
       return <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
     case 'video':
       return <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>;
+    case 'audio':
+      return <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" /></svg>;
     default:
       return <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h12" /></svg>;
   }
@@ -478,15 +513,17 @@ function ModelTypeIcon({ type }: { type: string }) {
 function getSupportedModes(model: PollinationsModel | null): GenerationMode[] {
   if (!model) return ['text'];
 
-  // Image-only and video-only models: only offer their native mode
+  // Image-only, video-only, and audio-only models: only offer their native mode
   if (model.type === 'image') return ['image'];
   if (model.type === 'video') return ['video'];
+  if (model.type === 'audio') return ['audio'];
 
   // Text models: offer text + any additional output modalities
   const modes: GenerationMode[] = ['text'];
   const outputs = model.outputModalities.map((m) => m.toLowerCase());
   if (outputs.includes('image')) modes.push('image');
   if (outputs.includes('video')) modes.push('video');
+  if (outputs.includes('audio')) modes.push('audio');
 
   return [...new Set(modes)];
 }
@@ -512,6 +549,11 @@ function ModeIcon({ mode }: { mode: GenerationMode }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
       );
-
+    case 'audio':
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+        </svg>
+      );
   }
 }

@@ -27,6 +27,7 @@ import {
   getUsage,
   generateImage,
   generateVideo,
+  generateAudioDirect,
   PollinationsError,
 } from '../lib/pollinations';
 import { estimateTokens, getTokenMeterColor } from '../lib/tokenizer';
@@ -208,8 +209,9 @@ export default function ChatPage({
     let effectiveMode = mode;
     if (modelType === 'image') effectiveMode = 'image';
     else if (modelType === 'video') effectiveMode = 'video';
+    else if (modelType === 'audio') effectiveMode = 'audio';
     else if (modelType === 'text' && mode !== 'text') {
-      // Text-only model can't generate images/video — fall back to text
+      // Text-only model can't generate images/video/audio — fall back to text
       effectiveMode = 'text';
     }
 
@@ -311,13 +313,61 @@ export default function ChatPage({
       return;
     }
 
+    // ─── audio mode ────────────────────────────────────
+    if (effectiveMode === 'audio') {
+      setIsStreaming(true);
+
+      const audioMsgId = uuid();
+      addMessage(sessionId, {
+        id: audioMsgId,
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+        mode: 'audio',
+        model: selectedModel.name,
+        attachments: [],
+        isPartial: true,
+      });
+
+      try {
+        const audioBlob = await generateAudioDirect(apiKey, text, selectedModel.name, {
+          voice: 'alloy',
+        });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        updateMessage(sessionId, audioMsgId, {
+          content: 'Audio generated successfully.',
+          isPartial: false,
+          attachments: [{
+            id: uuid(),
+            type: 'audio',
+            name: 'generated.mp3',
+            mimeType: 'audio/mpeg',
+            dataUrl: audioUrl,
+            sizeBytes: audioBlob.size,
+          }],
+        });
+      } catch (err) {
+        const friendlyMsg = extractFriendlyError(err, selectedModel.name, 'audio');
+        handleError(err);
+        updateMessage(sessionId, audioMsgId, {
+          content: friendlyMsg,
+          isPartial: false,
+          isError: true,
+        });
+      } finally {
+        setIsStreaming(false);
+        postGenerationTasks();
+      }
+      return;
+    }
+
     // ─── text / streaming ──────────────────────────────
     setIsStreaming(true);
     const controller = new AbortController();
     abortRef.current = controller;
 
     // Build context
-    const apiMessages: { role: string; content: string }[] = [];
+    const apiMessages: { role: string; content: string | Array<{ type: string;[k: string]: unknown }> }[] = [];
 
     // Always inject a markdown formatting instruction
     const markdownInstruction = 'Format your responses using Markdown. Use headings, bullet points, numbered lists, code blocks with language tags, bold, italic, tables, and other Markdown formatting as appropriate to make responses clear and well-structured.';
@@ -326,9 +376,26 @@ export default function ChatPage({
       : markdownInstruction;
     apiMessages.push({ role: 'system', content: systemContent });
 
-    // Add history + new user message
+    // Add history + new user message (with multimodal content for vision)
     const allMessages = [...(activeSession?.messages ?? []), userMsg];
-    allMessages.forEach((m) => apiMessages.push({ role: m.role, content: m.content }));
+    allMessages.forEach((m) => {
+      // Check if message has image attachments — send as multimodal content
+      const imageAttachments = m.attachments?.filter((a) => a.type === 'image') ?? [];
+      if (m.role === 'user' && imageAttachments.length > 0) {
+        const contentParts: Array<{ type: string;[k: string]: unknown }> = [
+          { type: 'text', text: m.content },
+        ];
+        for (const att of imageAttachments) {
+          contentParts.push({
+            type: 'image_url',
+            image_url: { url: att.dataUrl },
+          });
+        }
+        apiMessages.push({ role: m.role, content: contentParts });
+      } else {
+        apiMessages.push({ role: m.role, content: m.content });
+      }
+    });
 
     // Placeholder assistant message
     const assistantId = uuid();
@@ -523,117 +590,114 @@ export default function ChatPage({
 
       {/* Full sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 bg-card border-r border-border transform transition-all duration-300 ease-in-out ${
-          sidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full w-72'
-        } lg:translate-x-0 lg:static lg:block ${
-          sidebarCollapsed ? 'lg:hidden' : 'lg:w-72'
-        }`}
+        className={`fixed inset-y-0 left-0 z-30 bg-card border-r border-border transform transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full w-72'
+          } lg:translate-x-0 lg:static lg:block ${sidebarCollapsed ? 'lg:hidden' : 'lg:w-72'
+          }`}
       >
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <h2 className="font-semibold text-foreground text-sm">Chats</h2>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleNewChat}
-            className="p-1.5 rounded-md hover:bg-accent transition-colors"
-            title="New chat"
-          >
-            <svg className="w-4 h-4 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-          <button
-            onClick={() => {
-              setSidebarCollapsed(true);
-              setSidebarOpen(false);
-            }}
-            className="hidden lg:block p-1.5 rounded-md hover:bg-accent transition-colors"
-            title="Collapse chat list"
-          >
-            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-          </button>
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground text-sm">Chats</h2>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleNewChat}
+              className="p-1.5 rounded-md hover:bg-accent transition-colors"
+              title="New chat"
+            >
+              <svg className="w-4 h-4 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
+                setSidebarCollapsed(true);
+                setSidebarOpen(false);
+              }}
+              className="hidden lg:block p-1.5 rounded-md hover:bg-accent transition-colors"
+              title="Collapse chat list"
+            >
+              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="overflow-y-auto h-[calc(100%-57px)] p-2 space-y-1">
-        {sessions.map((s) => (
-          <div
-            key={s.id}
-            className={`group flex items-center gap-1.5 p-2 rounded-md cursor-pointer transition-colors text-sm ${
-              s.id === activeSession?.id
-                ? 'bg-accent text-accent-foreground'
-                : 'hover:bg-accent/50 text-muted-foreground'
-            }`}
-          >
-            {renamingId === s.id ? (
-              <input
-                value={renameText}
-                onChange={(e) => setRenameText(e.target.value)}
-                onBlur={() => {
-                  if (renameText.trim()) renameSession(s.id, renameText.trim());
-                  setRenamingId(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+        <div className="overflow-y-auto h-[calc(100%-57px)] p-2 space-y-1">
+          {sessions.map((s) => (
+            <div
+              key={s.id}
+              className={`group flex items-center gap-1.5 p-2 rounded-md cursor-pointer transition-colors text-sm ${s.id === activeSession?.id
+                  ? 'bg-accent text-accent-foreground'
+                  : 'hover:bg-accent/50 text-muted-foreground'
+                }`}
+            >
+              {renamingId === s.id ? (
+                <input
+                  value={renameText}
+                  onChange={(e) => setRenameText(e.target.value)}
+                  onBlur={() => {
                     if (renameText.trim()) renameSession(s.id, renameText.trim());
                     setRenamingId(null);
-                  }
-                  if (e.key === 'Escape') setRenamingId(null);
-                }}
-                className="flex-1 bg-secondary border border-border rounded px-2 py-0.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                autoFocus
-              />
-            ) : (
-              <button
-                className="flex-1 text-left truncate"
-                onClick={() => {
-                  switchSession(s.id);
-                  setSidebarOpen(false);
-                }}
-              >
-                {s.title}
-              </button>
-            )}
-            {renamingId !== s.id && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setRenamingId(s.id);
-                    setRenameText(s.title);
                   }}
-                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 active:opacity-100 p-1 hover:text-foreground transition-all touch-action-manipulation"
-                  title="Rename chat"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteSession(s.id);
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (renameText.trim()) renameSession(s.id, renameText.trim());
+                      setRenamingId(null);
+                    }
+                    if (e.key === 'Escape') setRenamingId(null);
                   }}
-                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 active:opacity-100 p-1 hover:text-destructive transition-all touch-action-manipulation"
-                  title="Delete chat"
+                  className="flex-1 bg-secondary border border-border rounded px-2 py-0.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  autoFocus
+                />
+              ) : (
+                <button
+                  className="flex-1 text-left truncate"
+                  onClick={() => {
+                    switchSession(s.id);
+                    setSidebarOpen(false);
+                  }}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  {s.title}
                 </button>
-              </>
-            )}
-          </div>
-        ))}
+              )}
+              {renamingId !== s.id && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenamingId(s.id);
+                      setRenameText(s.title);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 active:opacity-100 p-1 hover:text-foreground transition-all touch-action-manipulation"
+                    title="Rename chat"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSession(s.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 active:opacity-100 p-1 hover:text-destructive transition-all touch-action-manipulation"
+                    title="Delete chat"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
 
-        {sessions.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center mt-8">
-            No chats yet. Start a conversation!
-          </p>
-        )}
+          {sessions.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center mt-8">
+              No chats yet. Start a conversation!
+            </p>
+          )}
+        </div>
       </div>
-    </div>
     </>
   );
 
