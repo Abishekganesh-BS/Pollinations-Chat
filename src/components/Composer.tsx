@@ -217,15 +217,15 @@ export default function Composer({
       )}
 
       {/* Floating input pill */}
-      <div className="flex items-end gap-1.5 sm:gap-2 ">
+      <div className="flex items-center gap-1.5 sm:gap-2 ">
         <div className="flex-1 min-w-0 flex items-end gap-0 bg-secondary border border-border rounded-full px-1 sm:px-1.5 py-1">
           {/* Attachment (+) button — inside left, disabled for non-vision models */}
           <button
             onClick={() => attachmentEnabled && fileInputRef.current?.click()}
             disabled={!attachmentEnabled}
             className={`flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full transition-colors ${attachmentEnabled
-                ? 'hover:bg-accent text-muted-foreground hover:text-foreground'
-                : 'text-muted-foreground/30 cursor-not-allowed'
+              ? 'hover:bg-accent text-muted-foreground hover:text-foreground'
+              : 'text-muted-foreground/30 cursor-not-allowed'
               }`}
             title={attachmentEnabled ? 'Attach file' : 'This model does not support file input'}
           >

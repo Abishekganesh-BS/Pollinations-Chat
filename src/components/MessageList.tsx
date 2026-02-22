@@ -370,7 +370,23 @@ function MessageBubble({
                       )}
                     </div>
                   ) : att.type === 'audio' ? (
-                    <audio controls src={att.dataUrl} className="max-w-full w-full sm:min-w-[280px]" />
+                    <div className="w-full min-w-[240px] max-w-full">
+                      <audio
+                        controls
+                        preload="metadata"
+                        src={att.dataUrl}
+                        className="w-full rounded-lg"
+                        style={{ minHeight: '44px' }}
+                      >
+                        Your browser does not support audio playback.
+                      </audio>
+                      <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                        </svg>
+                        {att.name}
+                      </p>
+                    </div>
                   ) : att.type === 'video' ? (
                     <video controls src={att.dataUrl} className={`rounded-md ${isUser ? 'max-w-[200px] sm:max-w-[250px]' : 'max-w-full max-h-[400px] sm:max-h-[500px] w-auto'
                       }`} />
